@@ -14,9 +14,11 @@ object NotificationUtil {
     const val CHANNEL_MONITOR = "monitor"
     const val CHANNEL_ALERTS = "alerts"
     const val CHANNEL_UPDATES = "updates"
+    const val CHANNEL_ACHIEVEMENTS = "achievements"
 
     const val NOTIF_MONITOR = 1
     const val NOTIF_ALERT_BASE = 1000
+    const val NOTIF_ACHIEVEMENT_BASE = 5000
 
     fun createChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -31,6 +33,29 @@ object NotificationUtil {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_UPDATES, "App Updates", NotificationManager.IMPORTANCE_DEFAULT)
         )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_ACHIEVEMENTS, "Achievements", NotificationManager.IMPORTANCE_HIGH)
+                .apply { description = "Unlocked achievement badges" }
+        )
+    }
+
+    fun sendAchievementUnlocked(context: Context, emoji: String, title: String, description: String, notifId: Int) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val pi = PendingIntent.getActivity(
+            context, 0,
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val notif = NotificationCompat.Builder(context, CHANNEL_ACHIEVEMENTS)
+            .setContentTitle("$emoji Achievement unlocked!")
+            .setContentText(title)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$title\n$description"))
+            .setSmallIcon(android.R.drawable.btn_star_big_on)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pi)
+            .setAutoCancel(true)
+            .build()
+        nm.notify(notifId, notif)
     }
 
     fun buildMonitorNotification(context: Context): Notification {

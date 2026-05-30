@@ -4,6 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import com.sirbenhenry.screenguard.data.AppDatabase
+import com.sirbenhenry.screenguard.data.entity.Achievement
 import com.sirbenhenry.screenguard.data.entity.StreakRecord
 import com.sirbenhenry.screenguard.data.entity.UsageRecord
 import com.sirbenhenry.screenguard.util.DateUtil
@@ -112,11 +113,16 @@ class UsageMonitorService : Service() {
             totalLimitMinutes = totalLimit
         )
         db.streakRecordDao().insert(streakRecord)
+
+        checkAchievements(db, allUsage, monitoredApps.map { it.packageName })
     }
 
     private suspend fun onMidnightReset() {
         warnedAt.clear()
         recalculateStreak()
+        val db = AppDatabase.get(this)
+        val monitoredPkgs = db.monitoredAppDao().getEnabled().map { it.packageName }
+        checkAchievements(db, emptyMap(), monitoredPkgs)
     }
 
     private suspend fun recalculateStreak() {
@@ -155,6 +161,46 @@ class UsageMonitorService : Service() {
         }
 
         Prefs.updateStreak(this, streak, longest)
+    }
+
+    private suspend fun checkAchievements(
+        db: AppDatabase,
+        usageMap: Map<String, Int>,
+        monitoredPkgs: List<String>
+    ) {
+        val cooldowns = db.cooldownSessionDao().countCompleted()
+        val streak = Prefs.currentStreakFlow(this).let { var v = 0; it.collect { x -> v = x }; v }
+        val streakRecords = db.streakRecordDao().getLast365()
+
+        data class Def(val id: String, val title: String, val desc: String, val emoji: String, val rare: Boolean, val earned: Boolean)
+
+        val candidates = listOf(
+            Def("cooldown_1",   "First Mindful Pause",  "Completed your first breathing cooldown",      "🧘", false, cooldowns >= 1),
+            Def("cooldown_10",  "Getting the Groove",   "Completed 10 mindful cooldowns",               "🌊", false, cooldowns >= 10),
+            Def("cooldown_50",  "Halfway Hero",         "50 cooldowns completed — half a century",      "⚡", false, cooldowns >= 50),
+            Def("cooldown_100", "Centurion",            "100 cooldowns. You breathed through all of it","💯", true,  cooldowns >= 100),
+            Def("cooldown_500", "Ironclad",             "500 cooldowns. Unbreakable discipline",        "🛡️", true,  cooldowns >= 500),
+            Def("streak_7",     "First Week",           "7-day streak — one full week under control",   "🔥", false, streak >= 7),
+            Def("streak_14",    "Fortnight",            "14 days straight. Two weeks of intent",        "🌟", false, streak >= 14),
+            Def("streak_30",    "Monthly Master",       "30-day streak. You rewired your habits",       "💎", true,  streak >= 30),
+            Def("cold_turkey",  "Cold Turkey",          "Zero usage on all monitored apps today",       "🦃", true,
+                monitoredPkgs.isNotEmpty() && monitoredPkgs.all { (usageMap[it] ?: 0) == 0 }),
+            Def("week_clean",   "Perfect Week",         "7 consecutive good days in a row",             "✨", false,
+                streakRecords.sortedByDescending { it.dateKey }.take(7).let { last -> last.size >= 7 && last.all { it.allUnderLimit } })
+        )
+
+        for (def in candidates) {
+            if (!def.earned) continue
+            if (db.achievementDao().getById(def.id) != null) continue
+            val achievement = Achievement(
+                id = def.id, title = def.title, description = def.desc, emoji = def.emoji, isRare = def.rare
+            )
+            val inserted = db.achievementDao().insert(achievement)
+            if (inserted != -1L) {
+                val notifId = NotificationUtil.NOTIF_ACHIEVEMENT_BASE + def.id.hashCode()
+                NotificationUtil.sendAchievementUnlocked(this, def.emoji, def.title, def.desc, notifId)
+            }
+        }
     }
 
     private fun sendStreakMilestoneNotif(streak: Int) {

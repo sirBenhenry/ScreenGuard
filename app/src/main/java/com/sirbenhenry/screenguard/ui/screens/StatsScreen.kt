@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sirbenhenry.screenguard.data.entity.Achievement
 import com.sirbenhenry.screenguard.data.entity.MonitoredApp
 import com.sirbenhenry.screenguard.data.entity.StreakRecord
 import com.sirbenhenry.screenguard.data.entity.UsageRecord
@@ -86,6 +87,27 @@ fun StatsScreen(state: StatsUiState) {
         }
 
         Spacer(Modifier.height(20.dp))
+
+        // Achievements
+        if (state.achievements.isNotEmpty()) {
+            Text("ACHIEVEMENTS", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, letterSpacing = 1.5.sp)
+            Spacer(Modifier.height(10.dp))
+            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    val columns = 2
+                    state.achievements.chunked(columns).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { achievement ->
+                                AchievementBadge(achievement, Modifier.weight(1f))
+                            }
+                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+        }
 
         // Full heat map
         Text("105-DAY HEAT MAP", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, letterSpacing = 1.5.sp)
@@ -176,5 +198,28 @@ private fun MiniNum(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
         Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun AchievementBadge(achievement: Achievement, modifier: Modifier = Modifier) {
+    val borderColor = if (achievement.isRare) Color(0xFFFFD700) else Color(0xFF334455)
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (achievement.isRare) Color(0xFF1A1400) else MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(if (achievement.isRare) 1.5.dp else 1.dp, borderColor),
+        modifier = modifier
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(achievement.emoji, fontSize = 28.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(achievement.title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, lineHeight = 15.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(achievement.description, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 13.sp)
+            if (achievement.isRare) {
+                Spacer(Modifier.height(4.dp))
+                Text("RARE", fontSize = 9.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        }
     }
 }

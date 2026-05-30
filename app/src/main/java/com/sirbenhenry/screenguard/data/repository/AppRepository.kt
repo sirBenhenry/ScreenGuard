@@ -32,6 +32,11 @@ class AppRepository(private val context: Context) {
     fun getTodayUsage(pkg: String) = UsageStatsUtil.getTodayUsageMinutes(context, pkg)
     fun getAllTodayUsage() = UsageStatsUtil.getAllTodayUsage(context)
 
+    // Achievements
+    fun achievementsFlow() = db.achievementDao().getAllFlow()
+    suspend fun insertAchievement(a: com.sirbenhenry.screenguard.data.entity.Achievement) = db.achievementDao().insert(a)
+    suspend fun hasAchievement(id: String) = db.achievementDao().getById(id) != null
+
     // Stats aggregates
     suspend fun totalCooldownsCompleted() = db.cooldownSessionDao().countCompleted()
     suspend fun totalOpensToday() = db.dailyOpenCountDao().totalOpensForDate(DateUtil.today()) ?: 0

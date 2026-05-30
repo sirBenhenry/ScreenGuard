@@ -3,6 +3,7 @@ package com.sirbenhenry.screenguard.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.sirbenhenry.screenguard.data.entity.Achievement
 import com.sirbenhenry.screenguard.data.entity.GoodApp
 import com.sirbenhenry.screenguard.data.entity.MonitoredApp
 import com.sirbenhenry.screenguard.data.entity.StreakRecord
@@ -28,6 +29,7 @@ data class StatsUiState(
     val streakRecords: List<StreakRecord> = emptyList(),
     val usageRecords: List<UsageRecord> = emptyList(),
     val monitoredApps: List<MonitoredApp> = emptyList(),
+    val achievements: List<Achievement> = emptyList(),
     val isLoading: Boolean = true
 )
 
@@ -59,9 +61,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val statsState: StateFlow<StatsUiState> = combine(
         repo.streakFlow(),
         repo.last365UsageFlow(),
-        repo.monitoredAppsFlow()
-    ) { streaks, usage, apps ->
-        StatsUiState(streaks, usage, apps, false)
+        repo.monitoredAppsFlow(),
+        repo.achievementsFlow()
+    ) { streaks, usage, apps, achievements ->
+        StatsUiState(streaks, usage, apps, achievements, false)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatsUiState())
 
     val monitoredApps: StateFlow<List<MonitoredApp>> =
