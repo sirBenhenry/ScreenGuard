@@ -105,6 +105,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- Focus block overlay -->
+        <activity
+            android:name=".ui.overlay.FocusBlockActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ScreenGuard.Overlay"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:taskAffinity=".focusblock" />
+
         <!-- Provider for APK install -->
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -19,7 +19,10 @@ import com.sirbenhenry.screenguard.ui.theme.ScreenGuardTheme
 import com.sirbenhenry.screenguard.util.ReleaseInfo
 import com.sirbenhenry.screenguard.util.UpdateChecker
 import com.sirbenhenry.screenguard.viewmodel.MainViewModel
+import com.sirbenhenry.screenguard.util.Prefs
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 data class NavItem(val label: String, val icon: ImageVector)
 
@@ -41,7 +44,19 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ScreenGuardApp(vm: MainViewModel) {
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var onboarded by remember { mutableStateOf(runBlocking { Prefs.onboardedFlow(context).first() }) }
     var currentTab by remember { mutableIntStateOf(0) }
+
+    if (!onboarded) {
+        OnboardingScreen(onComplete = {
+            scope.launch {
+                Prefs.setOnboarded(context)
+                onboarded = true
+            }
+        })
+        return
+    }
     val homeState by vm.homeState.collectAsStateWithLifecycle()
     val statsState by vm.statsState.collectAsStateWithLifecycle()
     val monitoredApps by vm.monitoredApps.collectAsStateWithLifecycle()

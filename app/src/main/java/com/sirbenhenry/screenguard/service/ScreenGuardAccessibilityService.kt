@@ -11,6 +11,7 @@ import com.sirbenhenry.screenguard.util.DateUtil
 import com.sirbenhenry.screenguard.util.UsageStatsUtil
 import kotlinx.coroutines.*
 import java.util.Calendar
+import com.sirbenhenry.screenguard.data.entity.FocusHour
 
 class ScreenGuardAccessibilityService : AccessibilityService() {
 
@@ -41,6 +42,12 @@ class ScreenGuardAccessibilityService : AccessibilityService() {
         val today = DateUtil.today()
         val usedMinutes = UsageStatsUtil.getTodayUsageMinutes(this, pkg)
         val limitMinutes = effectiveLimit(app)
+
+        // Focus hours: total block, no cooldown
+        if (isDuringFocusHour()) {
+            showFocusBlock(app.appName)
+            return
+        }
 
         if (usedMinutes >= limitMinutes) {
             if (!limitShownToday.contains(pkg)) {
@@ -79,6 +86,29 @@ class ScreenGuardAccessibilityService : AccessibilityService() {
 
         cooldownShownThisLaunch[pkg] = now
         showCooldown(pkg, app.appName, cooldownSecs, openCount + 1, usedMinutes, limitMinutes)
+    }
+
+    private suspend fun isDuringFocusHour(): Boolean {
+        val cal = Calendar.getInstance()
+        val nowMin = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+        val dow = cal.get(Calendar.DAY_OF_WEEK)
+        val isWeekend = dow == Calendar.SATURDAY || dow == Calendar.SUNDAY
+        val focusHours = AppDatabase.get(this).focusHourDao().getEnabled()
+        return focusHours.any { fh ->
+            val applies = if (isWeekend) fh.appliesWeekends else fh.appliesWeekdays
+            if (!applies) return@any false
+            val start = fh.startHour * 60 + fh.startMinute
+            val end = fh.endHour * 60 + fh.endMinute
+            if (end > start) nowMin in start until end
+            else nowMin >= start || nowMin < end // overnight range
+        }
+    }
+
+    private fun showFocusBlock(appName: String) {
+        startActivity(Intent(this, com.sirbenhenry.screenguard.ui.overlay.FocusBlockActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra("appName", appName)
+        })
     }
 
     private fun effectiveLimit(app: com.sirbenhenry.screenguard.data.entity.MonitoredApp): Int {

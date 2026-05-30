@@ -4,7 +4,6 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.foundation.layout.*
@@ -23,9 +22,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sirbenhenry.screenguard.service.UsageMonitorService
+import com.sirbenhenry.screenguard.data.AppDatabase
+import com.sirbenhenry.screenguard.data.entity.FocusHour
 import com.sirbenhenry.screenguard.util.Prefs
 import com.sirbenhenry.screenguard.util.UsageStatsUtil
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 @Composable
@@ -130,6 +131,11 @@ fun SettingsScreen(onCheckUpdate: () -> Unit) {
 
         Spacer(Modifier.height(20.dp))
 
+        // Focus hours
+        FocusHoursSection()
+
+        Spacer(Modifier.height(20.dp))
+
         // About
         SectionHeader("ABOUT")
         Spacer(Modifier.height(8.dp))
@@ -178,6 +184,136 @@ private fun PermissionRow(label: String, granted: Boolean, icon: ImageVector, on
             }
         }
     }
+}
+
+@Composable
+private fun FocusHoursSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var focusHours by remember { mutableStateOf<List<FocusHour>>(emptyList()) }
+    var showAdd by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        AppDatabase.get(context).focusHourDao().getAllFlow().collect { focusHours = it }
+    }
+
+    SectionHeader("FOCUS HOURS (FULL BLOCK)")
+    Spacer(Modifier.height(4.dp))
+    Text("During focus hours, monitored apps are completely blocked with no cooldown.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(Modifier.height(8.dp))
+
+    focusHours.forEach { fh ->
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("🎯", fontSize = 18.sp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(fh.label, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+                    Text(
+                        "%02d:%02d – %02d:%02d  %s".format(fh.startHour, fh.startMinute, fh.endHour, fh.endMinute,
+                            when {
+                                fh.appliesWeekdays && fh.appliesWeekends -> "every day"
+                                fh.appliesWeekdays -> "weekdays"
+                                else -> "weekends"
+                            }),
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = fh.isEnabled,
+                    onCheckedChange = { scope.launch { AppDatabase.get(context).focusHourDao().update(fh.copy(isEnabled = it)) } }
+                )
+                IconButton(onClick = { scope.launch { AppDatabase.get(context).focusHourDao().delete(fh) } }) {
+                    Icon(Icons.Default.Delete, null, tint = Color(0xFFFF6666))
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+    }
+
+    OutlinedButton(
+        onClick = { showAdd = true },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(Icons.Default.Add, null)
+        Spacer(Modifier.width(6.dp))
+        Text("Add focus hour")
+    }
+
+    if (showAdd) {
+        AddFocusHourDialog(
+            onAdd = { fh ->
+                scope.launch { AppDatabase.get(context).focusHourDao().insert(fh) }
+                showAdd = false
+            },
+            onDismiss = { showAdd = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddFocusHourDialog(onAdd: (FocusHour) -> Unit, onDismiss: () -> Unit) {
+    var label by remember { mutableStateOf("Focus time") }
+    var startH by remember { mutableIntStateOf(9) }
+    var startM by remember { mutableIntStateOf(0) }
+    var endH by remember { mutableIntStateOf(12) }
+    var endM by remember { mutableIntStateOf(0) }
+    var weekdays by remember { mutableStateOf(true) }
+    var weekends by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Focus Hour") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label") }, singleLine = true)
+
+                Text("Start: %02d:%02d".format(startH, startM), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Hour", fontSize = 11.sp)
+                        Slider(value = startH.toFloat(), onValueChange = { startH = it.toInt() }, valueRange = 0f..23f, steps = 22)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Min", fontSize = 11.sp)
+                        Slider(value = startM.toFloat(), onValueChange = { startM = (it / 5).toInt() * 5 }, valueRange = 0f..55f, steps = 10)
+                    }
+                }
+
+                Text("End: %02d:%02d".format(endH, endM), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Hour", fontSize = 11.sp)
+                        Slider(value = endH.toFloat(), onValueChange = { endH = it.toInt() }, valueRange = 0f..23f, steps = 22)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Min", fontSize = 11.sp)
+                        Slider(value = endM.toFloat(), onValueChange = { endM = (it / 5).toInt() * 5 }, valueRange = 0f..55f, steps = 10)
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = weekdays, onCheckedChange = { weekdays = it })
+                    Text("Weekdays")
+                    Spacer(Modifier.width(16.dp))
+                    Checkbox(checked = weekends, onCheckedChange = { weekends = it })
+                    Text("Weekends")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                onAdd(FocusHour(startHour = startH, startMinute = startM, endHour = endH, endMinute = endM,
+                    label = label, appliesWeekdays = weekdays, appliesWeekends = weekends))
+            }) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 private fun isAccessibilityEnabled(context: Context): Boolean {
