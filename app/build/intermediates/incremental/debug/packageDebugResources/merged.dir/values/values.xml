@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">ScreenGuard uses accessibility services to detect when you open monitored apps and enforce your daily screen time limits.</string>
+    <string name="accessibility_service_label">ScreenGuard Monitor</string>
+    <string name="app_name">ScreenGuard</string>
+    <style name="Theme.ScreenGuard" parent="android:Theme.Material.Light.NoActionBar"/>
+    <style name="Theme.ScreenGuard.Overlay" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>
