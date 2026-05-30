@@ -35,6 +35,7 @@ class AppRepository(private val context: Context) {
     // Stats aggregates
     suspend fun totalCooldownsCompleted() = db.cooldownSessionDao().countCompleted()
     suspend fun totalOpensToday() = db.dailyOpenCountDao().totalOpensForDate(DateUtil.today()) ?: 0
+    suspend fun availableFreezes() = db.streakFreezeDao().getAvailable().size
 
     suspend fun todayScore(monitoredApps: List<MonitoredApp>): Int {
         if (monitoredApps.isEmpty()) return 100

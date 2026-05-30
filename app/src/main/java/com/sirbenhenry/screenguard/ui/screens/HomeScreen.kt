@@ -102,6 +102,7 @@ fun HomeScreen(
             currentStreak = state.currentStreak,
             longestStreak = state.longestStreak,
             totalSavedMinutes = state.totalSavedMinutes,
+            availableFreezes = state.availableFreezes,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -119,11 +120,32 @@ fun HomeScreen(
                 modifier = Modifier.weight(1f)
             )
             MiniStatCard(
-                "Time saved\nthis week",
-                "${state.totalSavedMinutes / 60}h ${state.totalSavedMinutes % 60}m",
+                "Life minutes\nreclaimed",
+                "${state.totalSavedMinutes}m",
                 Color(0xFF44BB88),
                 modifier = Modifier.weight(1f)
             )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // "What you could do instead" — infinite game mechanic
+        if (state.totalSavedMinutes > 10) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+            ) {
+                val books = state.totalSavedMinutes / 250
+                val walks = state.totalSavedMinutes / 30
+                val songs = state.totalSavedMinutes / 4
+                Text(
+                    "With ${state.totalSavedMinutes}min saved: ~$books books read · ~$walks walks · ~$songs songs listened",
+                    modifier = Modifier.padding(12.dp),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
 
         Spacer(Modifier.height(20.dp))

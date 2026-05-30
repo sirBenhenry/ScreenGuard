@@ -15,9 +15,10 @@ import com.sirbenhenry.screenguard.data.entity.*
         StreakRecord::class,
         CooldownSession::class,
         DailyOpenCount::class,
-        FocusHour::class
+        FocusHour::class,
+        StreakFreeze::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -28,6 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cooldownSessionDao(): CooldownSessionDao
     abstract fun dailyOpenCountDao(): DailyOpenCountDao
     abstract fun focusHourDao(): FocusHourDao
+    abstract fun streakFreezeDao(): StreakFreezeDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null

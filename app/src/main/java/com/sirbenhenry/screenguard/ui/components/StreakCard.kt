@@ -4,8 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,7 +21,9 @@ fun StreakCard(
     currentStreak: Int,
     longestStreak: Int,
     totalSavedMinutes: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    availableFreezes: Int = 0,
+    onUseFreezeForYesterday: (() -> Unit)? = null
 ) {
     // Diamond milestones (from video: streaks unlock diamonds)
     val diamonds = listOf(7, 14, 30, 60, 90, 180, 365)
@@ -131,6 +132,21 @@ fun StreakCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 StatItem("Best", "${longestStreak}d", Color(0xFFFFD700))
                 StatItem("Saved", "${totalSavedMinutes / 60}h ${totalSavedMinutes % 60}m", Color(0xFF44BB88))
+                if (availableFreezes > 0) {
+                    StatItem("Freezes", "🧊×$availableFreezes", Color(0xFF88CCFF))
+                }
+            }
+
+            // Use freeze button (only if streak broke yesterday and freeze available)
+            if (availableFreezes > 0 && onUseFreezeForYesterday != null) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onUseFreezeForYesterday,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF88CCFF))
+                ) {
+                    Text("🧊 Use freeze to protect streak")
+                }
             }
         }
     }

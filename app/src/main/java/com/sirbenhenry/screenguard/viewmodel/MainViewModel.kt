@@ -20,6 +20,7 @@ data class HomeUiState(
     val longestStreak: Int = 0,
     val totalSavedMinutes: Int = 0,
     val totalCooldowns: Int = 0,
+    val availableFreezes: Int = 0,
     val isLoading: Boolean = true
 )
 
@@ -50,6 +51,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             longestStreak = longest,
             totalSavedMinutes = saved,
             totalCooldowns = repo.totalCooldownsCompleted(),
+            availableFreezes = repo.availableFreezes(),
             isLoading = false
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())

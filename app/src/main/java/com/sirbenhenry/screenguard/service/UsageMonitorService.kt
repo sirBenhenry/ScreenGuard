@@ -124,24 +124,49 @@ class UsageMonitorService : Service() {
         val records = db.streakRecordDao().getLast365()
         if (records.isEmpty()) return
 
-        var streak = 0
         val sorted = records.sortedByDescending { it.dateKey }
         val yesterday = DateUtil.daysAgo(1)
 
+        var streak = 0
         for (r in sorted) {
-            if (!r.allUnderLimit) break
-            if (streak == 0 && r.dateKey > yesterday) continue // don't count today yet
+            if (streak == 0 && r.dateKey >= DateUtil.today()) continue
+            val countable = r.allUnderLimit || (db.streakFreezeDao().usedOnDate(r.dateKey) > 0)
+            if (!countable) break
             streak++
         }
 
-        val longest = db.streakRecordDao().getLast365()
-            .sortedBy { it.dateKey }
+        val longest = records.sortedBy { it.dateKey }
             .fold(Pair(0, 0)) { (cur, max), r ->
                 val newCur = if (r.allUnderLimit) cur + 1 else 0
                 Pair(newCur, maxOf(max, newCur))
             }.second
 
+        val prevStreak = Prefs.currentStreakFlow(this).let {
+            var v = 0; it.collect { x -> v = x }; v
+        }
+
+        // Award streak freeze at diamond milestones (30-day diamonds)
+        val diamonds = listOf(30, 60, 90, 180, 270, 365)
+        for (d in diamonds) {
+            if (streak >= d && prevStreak < d) {
+                db.streakFreezeDao().insert(com.sirbenhenry.screenguard.data.entity.StreakFreeze())
+                sendStreakMilestoneNotif(streak)
+            }
+        }
+
         Prefs.updateStreak(this, streak, longest)
+    }
+
+    private fun sendStreakMilestoneNotif(streak: Int) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val notif = androidx.core.app.NotificationCompat.Builder(this, NotificationUtil.CHANNEL_ALERTS)
+            .setContentTitle("🔥 $streak-day streak milestone!")
+            .setContentText("You earned a streak freeze. Use it wisely.")
+            .setSmallIcon(android.R.drawable.star_on)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        nm.notify(streak + 2000, notif)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
