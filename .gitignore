@@ -15,3 +15,7 @@
 local.properties
 *.keystore
 !debug.keystore
+
+# Build outputs
+app/build/
+.claude/
