@@ -30,4 +30,11 @@ object DateUtil {
         cal.set(Calendar.MILLISECOND, 0)
         return cal.timeInMillis
     }
+
+    fun startOfWeek(): String {
+        val cal = Calendar.getInstance()
+        cal.firstDayOfWeek = Calendar.MONDAY
+        cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+        return fmt.format(cal.time)
+    }
 }

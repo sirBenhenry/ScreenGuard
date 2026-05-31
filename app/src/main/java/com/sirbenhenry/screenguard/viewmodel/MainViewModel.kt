@@ -10,6 +10,7 @@ import com.sirbenhenry.screenguard.data.entity.StreakRecord
 import com.sirbenhenry.screenguard.data.entity.UsageRecord
 import com.sirbenhenry.screenguard.data.repository.AppRepository
 import com.sirbenhenry.screenguard.util.Prefs
+import com.sirbenhenry.screenguard.util.DateUtil
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -22,6 +23,7 @@ data class HomeUiState(
     val totalSavedMinutes: Int = 0,
     val totalCooldowns: Int = 0,
     val availableFreezes: Int = 0,
+    val weeklyGoodDays: Int = 0,
     val isLoading: Boolean = true
 )
 
@@ -42,9 +44,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         repo.todayUsageFlow(),
         Prefs.currentStreakFlow(app),
         Prefs.longestStreakFlow(app),
-        Prefs.totalSavedMinutesFlow(app)
-    ) { apps, usage, streak, longest, saved ->
+        combine(Prefs.totalSavedMinutesFlow(app), repo.streakFlow()) { saved, streaks -> Pair(saved, streaks) }
+    ) { apps, usage, streak, longest, (saved, streaks) ->
         val liveUsage = repo.getAllTodayUsage()
+        val weekStart = DateUtil.startOfWeek()
+        val weeklyGood = streaks.count { it.dateKey >= weekStart && it.allUnderLimit }
         HomeUiState(
             monitoredApps = apps,
             todayUsageMap = liveUsage,
@@ -54,6 +58,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             totalSavedMinutes = saved,
             totalCooldowns = repo.totalCooldownsCompleted(),
             availableFreezes = repo.availableFreezes(),
+            weeklyGoodDays = weeklyGood,
             isLoading = false
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())

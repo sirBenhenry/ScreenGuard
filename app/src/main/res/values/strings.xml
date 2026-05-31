@@ -3,4 +3,5 @@
     <string name="app_name">ScreenGuard</string>
     <string name="accessibility_service_label">ScreenGuard Monitor</string>
     <string name="accessibility_service_description">ScreenGuard uses accessibility services to detect when you open monitored apps and enforce your daily screen time limits.</string>
+    <string name="widget_description">Shows your today\'s score and current streak at a glance</string>
 </resources>

@@ -11,6 +11,7 @@ import com.sirbenhenry.screenguard.util.DateUtil
 import com.sirbenhenry.screenguard.util.NotificationUtil
 import com.sirbenhenry.screenguard.util.Prefs
 import com.sirbenhenry.screenguard.util.UsageStatsUtil
+import com.sirbenhenry.screenguard.widget.ScoreWidget
 import kotlinx.coroutines.*
 
 class UsageMonitorService : Service() {
@@ -115,6 +116,14 @@ class UsageMonitorService : Service() {
         db.streakRecordDao().insert(streakRecord)
 
         checkAchievements(db, allUsage, monitoredApps.map { it.packageName })
+
+        val score = if (monitoredApps.isEmpty()) 100 else
+            monitoredApps.sumOf { app ->
+                val used = allUsage[app.packageName] ?: 0
+                val limit = app.dailyLimitMinutes
+                if (limit > 0) ((1f - used.toFloat() / limit).coerceIn(0f, 1f) * 100).toInt() else 100
+            } / monitoredApps.size
+        ScoreWidget.push(this, score = score)
     }
 
     private suspend fun onMidnightReset() {
@@ -161,6 +170,7 @@ class UsageMonitorService : Service() {
         }
 
         Prefs.updateStreak(this, streak, longest)
+        ScoreWidget.push(this, streak = streak)
     }
 
     private suspend fun checkAchievements(

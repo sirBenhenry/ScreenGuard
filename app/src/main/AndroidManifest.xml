@@ -114,6 +114,19 @@
             android:excludeFromRecents="true"
             android:taskAffinity=".focusblock" />
 
+        <!-- Home screen widget -->
+        <receiver
+            android:name=".widget.ScoreWidget"
+            android:exported="true"
+            android:label="ScreenGuard Score">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/screenguard_widget_info" />
+        </receiver>
+
         <!-- Provider for APK install -->
         <provider
             android:name="androidx.core.content.FileProvider"

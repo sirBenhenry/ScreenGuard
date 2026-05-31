@@ -108,6 +108,11 @@ fun HomeScreen(
 
         Spacer(Modifier.height(20.dp))
 
+        // Weekly challenge
+        WeeklyChallenge(state.weeklyGoodDays)
+
+        Spacer(Modifier.height(20.dp))
+
         // Quick stats row
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -278,6 +283,79 @@ private fun NoAppsCard() {
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center
             )
+        }
+    }
+}
+
+@Composable
+private fun WeeklyChallenge(goodDays: Int) {
+    val progress = (goodDays / 7f).coerceIn(0f, 1f)
+    val color = when {
+        goodDays >= 7 -> Color(0xFFFFD700)
+        goodDays >= 5 -> Color(0xFF44BB88)
+        goodDays >= 3 -> Color(0xFF4A9EFF)
+        else -> Color(0xFF445566)
+    }
+    val label = when {
+        goodDays >= 7 -> "Perfect week! 🏆"
+        goodDays >= 5 -> "Almost there!"
+        goodDays >= 3 -> "Good momentum"
+        goodDays > 0 -> "Keep going"
+        else -> "Start today"
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("WEEKLY CHALLENGE", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
+                Text(label, fontSize = 11.sp, color = color, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("Stay under limits every day this week", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val days = listOf("M", "T", "W", "T", "F", "S", "S")
+                days.forEachIndexed { i, d ->
+                    val done = i < goodDays
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (done) color.copy(alpha = 0.2f) else Color(0xFF1A2233))
+                    ) {
+                        Text(
+                            if (done) "✓" else d,
+                            fontSize = 11.sp,
+                            color = if (done) color else Color(0xFF445566),
+                            fontWeight = if (done) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0xFF1A2233))
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(color)
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("$goodDays / 7 days", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
