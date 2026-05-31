@@ -18,6 +18,7 @@ class UsageMonitorService : Service() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val warnedAt = mutableMapOf<String, Int>() // pkg -> last warned threshold
+    private var dailySummarySentDate = ""
 
     override fun onCreate() {
         super.onCreate()
@@ -124,6 +125,14 @@ class UsageMonitorService : Service() {
                 if (limit > 0) ((1f - used.toFloat() / limit).coerceIn(0f, 1f) * 100).toInt() else 100
             } / monitoredApps.size
         ScoreWidget.push(this, score = score)
+
+        // Daily summary at 9pm (once per day)
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        if (hour >= 21 && dailySummarySentDate != today && monitoredApps.isNotEmpty()) {
+            dailySummarySentDate = today
+            val streak = Prefs.currentStreakFlow(this).let { var v = 0; it.collect { x -> v = x }; v }
+            NotificationUtil.sendDailySummary(this, score, streak)
+        }
     }
 
     private suspend fun onMidnightReset() {
@@ -138,6 +147,7 @@ class UsageMonitorService : Service() {
         }
 
         warnedAt.clear()
+        dailySummarySentDate = ""
         recalculateStreak()
         val monitoredPkgs = db.monitoredAppDao().getEnabled().map { it.packageName }
         checkAchievements(db, emptyMap(), monitoredPkgs)

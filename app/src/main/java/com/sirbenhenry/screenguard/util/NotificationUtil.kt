@@ -15,10 +15,12 @@ object NotificationUtil {
     const val CHANNEL_ALERTS = "alerts"
     const val CHANNEL_UPDATES = "updates"
     const val CHANNEL_ACHIEVEMENTS = "achievements"
+    const val CHANNEL_DAILY = "daily_summary"
 
     const val NOTIF_MONITOR = 1
     const val NOTIF_ALERT_BASE = 1000
     const val NOTIF_ACHIEVEMENT_BASE = 5000
+    const val NOTIF_DAILY_SUMMARY = 9000
 
     fun createChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -37,6 +39,41 @@ object NotificationUtil {
             NotificationChannel(CHANNEL_ACHIEVEMENTS, "Achievements", NotificationManager.IMPORTANCE_HIGH)
                 .apply { description = "Unlocked achievement badges" }
         )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_DAILY, "Daily Summary", NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = "Daily score recap sent at 9pm" }
+        )
+    }
+
+    fun sendDailySummary(context: Context, score: Int, streak: Int) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val pi = PendingIntent.getActivity(
+            context, 0,
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val streakText = if (streak > 0) " • 🔥 $streak-day streak" else ""
+        val scoreEmoji = when {
+            score >= 90 -> "🟢"
+            score >= 70 -> "🔵"
+            score >= 50 -> "🟡"
+            else -> "🔴"
+        }
+        val notif = NotificationCompat.Builder(context, CHANNEL_DAILY)
+            .setContentTitle("$scoreEmoji Today's score: $score/100$streakText")
+            .setContentText(dailySummaryBody(score))
+            .setSmallIcon(android.R.drawable.ic_menu_recent_history)
+            .setContentIntent(pi)
+            .setAutoCancel(true)
+            .build()
+        nm.notify(NOTIF_DAILY_SUMMARY, notif)
+    }
+
+    private fun dailySummaryBody(score: Int) = when {
+        score >= 90 -> "Outstanding day. You stayed in control."
+        score >= 70 -> "Solid day. Keep the momentum going."
+        score >= 50 -> "Not your best, but tomorrow's a fresh start."
+        else -> "Rough day. You know what to do tomorrow."
     }
 
     fun sendAchievementUnlocked(context: Context, emoji: String, title: String, description: String, notifId: Int) {
