@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sirbenhenry.screenguard.MainActivity
 import com.sirbenhenry.screenguard.ui.theme.ScreenGuardTheme
+import java.util.Calendar
 
 class LimitReachedActivity : ComponentActivity() {
 
@@ -120,7 +121,12 @@ private fun LimitReachedScreen(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Your limit resets at midnight.",
+                run {
+                    val cal = Calendar.getInstance()
+                    val h = 23 - cal.get(Calendar.HOUR_OF_DAY)
+                    val m = 59 - cal.get(Calendar.MINUTE)
+                    if (h > 0) "Resets in ${h}h ${m}m" else "Resets in ${m}m"
+                },
                 color = Color(0xFF886666),
                 fontSize = 14.sp
             )
