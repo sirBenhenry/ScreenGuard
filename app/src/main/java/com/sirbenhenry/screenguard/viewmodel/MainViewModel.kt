@@ -86,4 +86,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun removeGoodApp(app: GoodApp) = viewModelScope.launch { repo.removeGoodApp(app) }
 
     fun getTodayUsage(pkg: String) = repo.getTodayUsage(pkg)
+
+    fun useFreezeForYesterday() = viewModelScope.launch {
+        if (repo.useFreezeForYesterday()) {
+            repo.recalculateAndSaveStreak()
+        }
+    }
 }

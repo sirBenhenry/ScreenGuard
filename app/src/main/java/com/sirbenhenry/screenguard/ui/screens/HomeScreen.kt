@@ -31,7 +31,8 @@ import java.util.*
 @Composable
 fun HomeScreen(
     state: HomeUiState,
-    streakRecords: List<com.sirbenhenry.screenguard.data.entity.StreakRecord>
+    streakRecords: List<com.sirbenhenry.screenguard.data.entity.StreakRecord>,
+    onUseFreezeForYesterday: () -> Unit = {}
 ) {
     if (state.isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -103,6 +104,7 @@ fun HomeScreen(
             longestStreak = state.longestStreak,
             totalSavedMinutes = state.totalSavedMinutes,
             availableFreezes = state.availableFreezes,
+            onUseFreezeForYesterday = if (state.availableFreezes > 0) onUseFreezeForYesterday else null,
             modifier = Modifier.fillMaxWidth()
         )
 

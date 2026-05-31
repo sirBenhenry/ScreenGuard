@@ -100,7 +100,11 @@ private fun ScreenGuardApp(vm: MainViewModel) {
     ) { padding ->
         Box(Modifier.padding(padding)) {
             when (currentTab) {
-                0 -> HomeScreen(homeState, statsState.streakRecords)
+                0 -> HomeScreen(
+                    homeState,
+                    statsState.streakRecords,
+                    onUseFreezeForYesterday = vm::useFreezeForYesterday
+                )
                 1 -> StatsScreen(statsState)
                 2 -> AppsScreen(
                     monitoredApps = monitoredApps,

@@ -4,6 +4,7 @@ import android.content.Context
 import com.sirbenhenry.screenguard.data.AppDatabase
 import com.sirbenhenry.screenguard.data.entity.*
 import com.sirbenhenry.screenguard.util.DateUtil
+import com.sirbenhenry.screenguard.util.Prefs
 import com.sirbenhenry.screenguard.util.UsageStatsUtil
 import kotlinx.coroutines.flow.Flow
 
@@ -36,6 +37,37 @@ class AppRepository(private val context: Context) {
     fun achievementsFlow() = db.achievementDao().getAllFlow()
     suspend fun insertAchievement(a: com.sirbenhenry.screenguard.data.entity.Achievement) = db.achievementDao().insert(a)
     suspend fun hasAchievement(id: String) = db.achievementDao().getById(id) != null
+
+    // Streak freeze: use one for yesterday; returns true if applied
+    suspend fun useFreezeForYesterday(): Boolean {
+        val yesterday = DateUtil.daysAgo(1)
+        if (db.streakFreezeDao().usedOnDate(yesterday) > 0) return false
+        val available = db.streakFreezeDao().getAvailable()
+        if (available.isEmpty()) return false
+        db.streakFreezeDao().update(available.first().copy(usedOnDate = yesterday))
+        return true
+    }
+
+    // Recalculate streak from DB records (same logic as UsageMonitorService)
+    suspend fun recalculateAndSaveStreak(): Int {
+        val records = db.streakRecordDao().getLast365()
+        if (records.isEmpty()) { Prefs.updateStreak(context, 0, 0); return 0 }
+        val sorted = records.sortedByDescending { it.dateKey }
+        var streak = 0
+        for (r in sorted) {
+            if (streak == 0 && r.dateKey >= DateUtil.today()) continue
+            val countable = r.allUnderLimit || (db.streakFreezeDao().usedOnDate(r.dateKey) > 0)
+            if (!countable) break
+            streak++
+        }
+        val longest = records.sortedBy { it.dateKey }
+            .fold(0 to 0) { (cur, max), r ->
+                val nc = if (r.allUnderLimit) cur + 1 else 0
+                nc to maxOf(max, nc)
+            }.second
+        Prefs.updateStreak(context, streak, longest)
+        return streak
+    }
 
     // Stats aggregates
     suspend fun totalCooldownsCompleted() = db.cooldownSessionDao().countCompleted()
