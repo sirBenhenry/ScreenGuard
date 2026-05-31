@@ -83,10 +83,14 @@ class UsageMonitorService : Service() {
                 ))
             }
 
-            // Warning notifications
+            // Warning notifications — check highest threshold first so each fires once
             val prevWarn = warnedAt[app.packageName] ?: 0
             val notifId = NotificationUtil.NOTIF_ALERT_BASE + app.packageName.hashCode()
             when {
+                pct >= 100 && prevWarn < 100 -> {
+                    warnedAt[app.packageName] = 100
+                    NotificationUtil.sendLimitReached(this, app.appName, notifId)
+                }
                 pct >= 95 && prevWarn < 95 -> {
                     warnedAt[app.packageName] = 95
                     NotificationUtil.sendLimitWarning(this, app.appName, 95, notifId)
@@ -98,10 +102,6 @@ class UsageMonitorService : Service() {
                 pct >= 75 && prevWarn < 75 -> {
                     warnedAt[app.packageName] = 75
                     NotificationUtil.sendLimitWarning(this, app.appName, 75, notifId)
-                }
-                pct >= 100 && prevWarn < 100 -> {
-                    warnedAt[app.packageName] = 100
-                    NotificationUtil.sendLimitReached(this, app.appName, notifId)
                 }
             }
         }
@@ -127,9 +127,18 @@ class UsageMonitorService : Service() {
     }
 
     private suspend fun onMidnightReset() {
+        val db = AppDatabase.get(this)
+
+        // Credit saved minutes for yesterday before rolling over
+        val yesterday = DateUtil.daysAgo(1)
+        val yesterdayRecord = db.streakRecordDao().getForDate(yesterday)
+        if (yesterdayRecord != null && yesterdayRecord.allUnderLimit) {
+            val saved = (yesterdayRecord.totalLimitMinutes - yesterdayRecord.totalMinutesUsed).coerceAtLeast(0)
+            if (saved > 0) Prefs.addSavedMinutes(this, saved)
+        }
+
         warnedAt.clear()
         recalculateStreak()
-        val db = AppDatabase.get(this)
         val monitoredPkgs = db.monitoredAppDao().getEnabled().map { it.packageName }
         checkAchievements(db, emptyMap(), monitoredPkgs)
     }
