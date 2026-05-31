@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sirbenhenry.screenguard.data.entity.GoodApp
 import com.sirbenhenry.screenguard.data.entity.MonitoredApp
+import com.sirbenhenry.screenguard.util.Prefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -44,6 +45,9 @@ fun AppsScreen(
     var editApp by remember { mutableStateOf<MonitoredApp?>(null) }
     var removeConfirm by remember { mutableStateOf<MonitoredApp?>(null) }
     var tab by remember { mutableIntStateOf(0) }
+    var defaultCooldown by remember { mutableIntStateOf(30) }
+
+    LaunchedEffect(Unit) { Prefs.cooldownSecondsFlow(context).collect { defaultCooldown = it } }
 
     LaunchedEffect(Unit) {
         installedApps = withContext(Dispatchers.IO) {
@@ -89,7 +93,8 @@ fun AppsScreen(
             onPick = { app ->
                 onAddMonitored(MonitoredApp(
                     packageName = app.packageName,
-                    appName = app.appName
+                    appName = app.appName,
+                    baseCooldownSeconds = defaultCooldown
                 ))
                 showAddMonitored = false
             },

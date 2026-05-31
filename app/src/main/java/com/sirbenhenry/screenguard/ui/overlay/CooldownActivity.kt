@@ -29,7 +29,9 @@ import com.sirbenhenry.screenguard.data.AppDatabase
 import com.sirbenhenry.screenguard.data.entity.CooldownSession
 import com.sirbenhenry.screenguard.data.entity.GoodApp
 import com.sirbenhenry.screenguard.ui.theme.ScreenGuardTheme
+import com.sirbenhenry.screenguard.util.Prefs
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 
 class CooldownActivity : ComponentActivity() {
 
@@ -51,6 +53,7 @@ class CooldownActivity : ComponentActivity() {
         val openNumber = intent.getIntExtra(EXTRA_OPEN_NUMBER, 1)
         val usedMin = intent.getIntExtra(EXTRA_USED_MIN, 0)
         val limitMin = intent.getIntExtra(EXTRA_LIMIT_MIN, 30)
+        val breathingEnabled = runBlocking { Prefs.enableBreathingFlow(this@CooldownActivity).first() }
 
         // Block back button — cooldown cannot be skipped
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -65,6 +68,7 @@ class CooldownActivity : ComponentActivity() {
                     openNumber = openNumber,
                     usedMin = usedMin,
                     limitMin = limitMin,
+                    breathingEnabled = breathingEnabled,
                     onFinished = {
                         CoroutineScope(Dispatchers.IO).launch {
                             AppDatabase.get(this@CooldownActivity).cooldownSessionDao()
@@ -109,6 +113,7 @@ private fun CooldownScreen(
     openNumber: Int,
     usedMin: Int,
     limitMin: Int,
+    breathingEnabled: Boolean = true,
     onFinished: () -> Unit,
     onOpenGoodApp: (String) -> Unit,
     getGoodApps: suspend () -> List<GoodApp>
@@ -206,7 +211,10 @@ private fun CooldownScreen(
             Spacer(Modifier.height(44.dp))
 
             // Breathing circle — the main focus
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.scale(breathScale)) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.scale(if (breathingEnabled) breathScale else 1f)
+            ) {
                 Box(
                     modifier = Modifier
                         .size(190.dp)
@@ -227,12 +235,14 @@ private fun CooldownScreen(
                             fontSize = 60.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
-                        Text(
-                            breathPhase,
-                            color = Color(0xFF6699BB),
-                            fontSize = 12.sp,
-                            letterSpacing = 1.sp
-                        )
+                        if (breathingEnabled) {
+                            Text(
+                                breathPhase,
+                                color = Color(0xFF6699BB),
+                                fontSize = 12.sp,
+                                letterSpacing = 1.sp
+                            )
+                        }
                     }
                 }
             }
